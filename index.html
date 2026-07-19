@@ -100,10 +100,10 @@ textarea.inp{resize:none;overflow:hidden;line-height:1.6;display:block;}
 .inp-role{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--muted);line-height:1.3;margin-bottom:-4px;}
 .inp-name{font-size:18.5px;font-weight:800;letter-spacing:-.022em;line-height:1.25;}
 .tags{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:1px;}
-.tag{display:inline-flex;align-items:center;background:var(--surface-2);border-radius:999px;padding:1px 3px 1px 8px;font-size:11px;line-height:1.5;color:var(--muted);font-weight:500;}
-.tag .tagin{font:inherit;color:inherit;background:transparent;border:0;outline:0;min-width:18px;padding:0;}
+.tag{display:inline-flex;align-items:center;background:var(--surface-2);border-radius:999px;padding:1px 2px 1px 7px;font-size:11px;line-height:1.5;color:var(--muted);font-weight:500;}
+.tag .tagin{font:inherit;color:inherit;background:transparent;border:0;outline:0;min-width:12px;padding:0;}
 .tag .tagin:focus{color:var(--text);}
-.tag .x{border:0;background:transparent;color:var(--muted);cursor:pointer;line-height:1;padding:0 3px;border-radius:5px;opacity:0;transition:.12s;display:grid;place-items:center;}
+.tag .x{border:0;background:transparent;color:var(--muted);cursor:pointer;line-height:1;padding:0 2px;margin-left:1px;border-radius:5px;opacity:0;transition:.12s;display:grid;place-items:center;}
 .tag:hover .x{opacity:.9;} .tag .x:hover{color:var(--accent);}
 .tag .x svg{width:8px;height:8px;stroke:currentColor;stroke-width:2.8;}
 .add{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--border);border-radius:999px;padding:3px 11px;
@@ -366,6 +366,17 @@ function field({value,placeholder,cls,multiline,onInput}){
   n.addEventListener("input",()=>{onInput(n.value); if(multiline)autoGrow(n); save();});
   if(multiline){n.rows=1; requestAnimationFrame(()=>autoGrow(n));}
   return n; }
+/* 입력칸 너비를 실제 글자 폭에 맞춤 (size 속성은 한글에서 과하게 넓어짐) */
+function fitInput(inp){
+  let m=fitInput._m;
+  if(!m){ m=fitInput._m=document.createElement("span");
+    m.style.cssText="position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:pre;";
+    document.body.appendChild(m); }
+  const cs=getComputedStyle(inp);
+  m.style.font=cs.font; m.style.letterSpacing=cs.letterSpacing;
+  m.textContent=inp.value||inp.placeholder||"";
+  inp.style.width=Math.max(12,Math.ceil(m.getBoundingClientRect().width)+1)+"px";
+}
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2400); }
 function download(url,filename){ const a=el("a",{href:url,download:filename}); document.body.append(a); a.click(); a.remove(); }
@@ -487,8 +498,9 @@ function renderPeople(){
     main.append(field({value:p.role,placeholder:"소개",cls:"inp-role",onInput:v=>p.role=v}));
     main.append(field({value:p.name,placeholder:"이름",cls:"inp-name",onInput:v=>p.name=v}));
     const tags=el("div",{class:"tags"});
-    p.tags.forEach((tg,ti)=>{ const tin=el("input",{class:"tagin",value:tg,placeholder:"태그",size:Math.max(2,(tg||"").length)});
-      tin.addEventListener("input",()=>{p.tags[ti]=tin.value;tin.size=Math.max(2,tin.value.length);save();});
+    p.tags.forEach((tg,ti)=>{ const tin=el("input",{class:"tagin",value:tg,placeholder:"태그"});
+      requestAnimationFrame(()=>fitInput(tin));
+      tin.addEventListener("input",()=>{p.tags[ti]=tin.value;fitInput(tin);save();});
       tags.append(el("div",{class:"tag"},[tin,el("button",{class:"x",title:"삭제",html:`<svg viewBox="0 0 24 24">${X}</svg>`,onclick:()=>{p.tags.splice(ti,1);save(true);renderPeople();}})])); });
     tags.append(el("button",{class:"add",style:"padding:2px 10px",onclick:()=>{p.tags.push("");save(true);renderPeople();}},"+"));
     main.append(tags);
