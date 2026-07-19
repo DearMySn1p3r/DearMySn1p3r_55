@@ -175,13 +175,15 @@ textarea.inp{resize:none;overflow:hidden;line-height:1.6;display:block;}
 .panel h3{margin:0 0 4px;font-size:16px;} .panel .sub{margin:0 0 20px;color:var(--muted);font-size:12px;}
 .panel .close{position:absolute;top:18px;right:18px;width:30px;height:30px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:9px;cursor:pointer;font-size:15px;}
 .panel .field{margin-bottom:18px;} .panel .field>label{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);margin-bottom:9px;}
-.palettes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.palettes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
 .pal{border:1px solid var(--border);border-radius:12px;padding:8px;cursor:pointer;background:var(--surface);display:flex;flex-direction:column;gap:6px;align-items:center;transition:.15s;}
 .pal:hover{border-color:var(--accent);}
+.pal[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
+.ghost[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);}
 .pal .prev{width:100%;height:26px;border-radius:8px;position:relative;overflow:hidden;border:1px solid rgba(0,0,0,.04);}
 .pal .prev i{position:absolute;right:5px;bottom:5px;width:11px;height:11px;border-radius:50%;}
 .pal small{font-size:10.5px;color:var(--muted);font-weight:600;}
-.swatches{display:flex;gap:9px;flex-wrap:wrap;}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;justify-items:center;}
 .swatch{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);cursor:pointer;padding:0;}
 .swatch[aria-pressed="true"]{outline:2px solid var(--text);outline-offset:2px;}
 .color-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);}
@@ -600,47 +602,100 @@ document.getElementById("saveImg").onclick=saveImage;
 /* =========================================================================
    테마
    ========================================================================= */
+const VARS=["--bg","--surface","--surface-2","--text","--muted","--border","--accent","--on-accent","--shadow"];
+
+/* 팔레트: 라이트 6종 · 다크 4종 */
 const PALETTES={
   "로즈":{mode:"light",vars:{"--bg":"#fdeef4","--surface":"#ffffff","--surface-2":"#fbe7ef","--text":"#463138","--muted":"#c793a7","--border":"#f4d9e5","--accent":"#ef82a6"}},
+  "피치":{mode:"light",vars:{"--bg":"#fef1ea","--surface":"#ffffff","--surface-2":"#fbe6da","--text":"#48332a","--muted":"#c99a80","--border":"#f6ddcd","--accent":"#f0885c"}},
   "라벤더":{mode:"light",vars:{"--bg":"#f3effa","--surface":"#ffffff","--surface-2":"#efe9fa","--text":"#352d44","--muted":"#a396c0","--border":"#e6def4","--accent":"#9b8cd8"}},
+  "스카이":{mode:"light",vars:{"--bg":"#ecf2fa","--surface":"#ffffff","--surface-2":"#e3ecf8","--text":"#25313f","--muted":"#8ba3bd","--border":"#dbe6f3","--accent":"#5b93cf"}},
   "민트":{mode:"light",vars:{"--bg":"#ecf6f1","--surface":"#ffffff","--surface-2":"#e4f2ea","--text":"#25342c","--muted":"#8ab3a0","--border":"#dcefe4","--accent":"#5fbf98"}},
-  "레몬":{mode:"light",vars:{"--bg":"#fbf6e9","--surface":"#fffdf7","--surface-2":"#f6efdb","--text":"#3a3320","--muted":"#b7a878","--border":"#efe6cb","--accent":"#e6b23c"}},
+  "크림":{mode:"light",vars:{"--bg":"#faf6ec","--surface":"#fffdf8","--surface-2":"#f4ecdb","--text":"#3b3427","--muted":"#b6a07e","--border":"#ece2ce","--accent":"#c9a05c"}},
   "모노":{mode:"light",vars:{"--bg":"#f4f4f4","--surface":"#ffffff","--surface-2":"#ececec","--text":"#1c1c1c","--muted":"#9a9a9a","--border":"#e5e5e5","--accent":"#3a3a3a"}},
   "미드나잇":{mode:"dark",vars:{"--bg":"#191319","--surface":"#221a20","--surface-2":"#2a2028","--text":"#f0e5eb","--muted":"#b090a0","--border":"#382c34","--accent":"#f491b1"}},
+  "다크 블루":{mode:"dark",vars:{"--bg":"#111620","--surface":"#1a2130","--surface-2":"#212a3b","--text":"#e6ecf5","--muted":"#8a9ab3","--border":"#2c3648","--accent":"#7aa7e0"}},
+  "다크 그린":{mode:"dark",vars:{"--bg":"#111b17","--surface":"#1a2621","--surface-2":"#212f29","--text":"#e6f0ea","--muted":"#8aa79a","--border":"#2b3b34","--accent":"#6fc79c"}},
+  "차콜":{mode:"dark",vars:{"--bg":"#151515","--surface":"#1e1e1e","--surface-2":"#262626","--text":"#ededed","--muted":"#909090","--border":"#333333","--accent":"#d4d4d4"}},
 };
-const tstore={ get(){try{return JSON.parse(localStorage.getItem("profile.theme")||"{}");}catch{return{};}}, set(v){try{localStorage.setItem("profile.theme",JSON.stringify(v));}catch{}} };
-function rgbToHex(c){const m=c.match(/\d+/g);if(!m)return c.trim();return "#"+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,"0")).join("");}
-function readVar(n){return rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#000000");}
-function applyTheme(s){ if(s.mode)document.documentElement.setAttribute("data-theme",s.mode);
-  Object.entries(s.vars||{}).forEach(([k,v])=>document.documentElement.style.setProperty(k,v));
-  if(s.radius!=null)document.documentElement.style.setProperty("--radius",s.radius+"px"); syncTheme(); }
-function saveTheme(part){ const s=tstore.get(); const next={...s,...part,vars:{...(s.vars||{}),...(part.vars||{})}}; tstore.set(next); applyTheme(next); }
-function applyPalette(name){ const p=PALETTES[name]; if(!p)return; const s=tstore.get(); const next={mode:p.mode,radius:s.radius,vars:{...p.vars}}; tstore.set(next); document.documentElement.removeAttribute("style"); applyTheme(next); }
+
+/* 포인트 컬러 프리셋 */
+const PRESETS=["#ef82a6","#f0885c","#e0b23c","#6fbf7a","#5fbf98","#5b93cf",
+               "#7a86d6","#9b8cd8","#c07ab8","#b4746a","#7c8a9c","#3a3a3a"];
+
+const tstore={ get(){ try{ return JSON.parse(localStorage.getItem("profile.theme")||"{}"); }catch{ return {}; } },
+  set(v){ try{ localStorage.setItem("profile.theme",JSON.stringify(v)); }catch{} } };
+
+function themeState(){ const s=tstore.get();
+  return { mode:s.mode==="dark"?"dark":"light", radius:(typeof s.radius==="number"?s.radius:null),
+           light:s.light||{}, dark:s.dark||{} }; }
+
+function rgbToHex(c){ const m=c.match(/\d+/g); if(!m) return c.trim();
+  return "#"+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,"0")).join(""); }
+function readVar(n){ return rgbToHex(getComputedStyle(document.documentElement).getPropertyValue(n).trim()||"#000000"); }
+/* 포인트 색 밝기에 따라 그 위 글자색 자동 결정 */
+function onAccent(hex){ const m=hex.replace("#","");
+  const r=parseInt(m.substr(0,2),16),g=parseInt(m.substr(2,2),16),b=parseInt(m.substr(4,2),16);
+  return (0.299*r+0.587*g+0.114*b)>150 ? "#1a1a1a" : "#ffffff"; }
+
+function applyTheme(){
+  const st=themeState(); const root=document.documentElement;
+  root.setAttribute("data-theme",st.mode);
+  VARS.forEach(v=>root.style.removeProperty(v));      // 인라인 값 초기화 → 모드 기본색이 살아남
+  const vars=st.mode==="dark"?st.dark:st.light;
+  Object.entries(vars).forEach(([k,v])=>root.style.setProperty(k,v));
+  if(vars["--accent"]&&!vars["--on-accent"]) root.style.setProperty("--on-accent",onAccent(vars["--accent"]));
+  if(st.radius!=null) root.style.setProperty("--radius",st.radius+"px"); else root.style.removeProperty("--radius");
+  syncTheme();
+}
+function setVar(name,value){ const s=tstore.get(); const st=themeState();
+  const bucket=st.mode==="dark"?"dark":"light";
+  s[bucket]={...(s[bucket]||{}),[name]:value}; s.mode=st.mode; tstore.set(s); applyTheme(); }
+function setMode(mode){ const s=tstore.get(); s.mode=mode; tstore.set(s); applyTheme(); }
+function applyPalette(name){ const p=PALETTES[name]; if(!p) return;
+  const s=tstore.get(); s.mode=p.mode;
+  s[p.mode]={...p.vars,"--on-accent":onAccent(p.vars["--accent"])};
+  tstore.set(s); applyTheme(); }
+
 function syncTheme(){
   document.querySelectorAll("input[type=color][data-var]").forEach(inp=>inp.value=readVar(inp.dataset.var));
   const rad=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--radius"))||18;
-  document.getElementById("radius").value=rad; document.getElementById("radiusVal").textContent=rad+"px";
+  const r=document.getElementById("radius"); if(r){ r.value=rad; document.getElementById("radiusVal").textContent=rad+"px"; }
   const acc=readVar("--accent").toLowerCase();
   document.querySelectorAll("#swatches .swatch").forEach(s=>s.setAttribute("aria-pressed",s.dataset.color.toLowerCase()===acc?"true":"false"));
+  const mode=document.documentElement.getAttribute("data-theme");
+  document.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===mode?"true":"false"));
+  document.querySelectorAll("#palettes .pal").forEach(b=>{
+    const p=PALETTES[b.dataset.pal];
+    b.setAttribute("aria-pressed", p && p.mode===mode && p.vars["--accent"].toLowerCase()===acc ? "true":"false"); });
 }
 function initTheme(){
   const pals=document.getElementById("palettes");
-  pals.innerHTML=Object.entries(PALETTES).map(([n,p])=>`<button class="pal" data-pal="${n}"><span class="prev" style="background:${p.vars["--bg"]}"><i style="background:${p.vars["--accent"]}"></i></span><small>${n}</small></button>`).join("");
+  pals.innerHTML=Object.entries(PALETTES).map(([n,p])=>
+    `<button class="pal" data-pal="${n}"><span class="prev" style="background:${p.vars["--bg"]}"><i style="background:${p.vars["--accent"]}"></i></span><small>${n}</small></button>`).join("");
   pals.querySelectorAll(".pal").forEach(b=>b.onclick=()=>applyPalette(b.dataset.pal));
-  const PRESETS=["#ef82a6","#9b8cd8","#5fbf98","#e6b23c","#7c8a9c","#3a3a3a"];
+
   const sw=document.getElementById("swatches");
   sw.innerHTML=PRESETS.map(c=>`<button class="swatch" data-color="${c}" style="background:${c}" aria-label="${c}"></button>`).join("");
-  sw.querySelectorAll(".swatch").forEach(b=>b.onclick=()=>saveTheme({vars:{"--accent":b.dataset.color}}));
-  document.querySelectorAll("input[type=color][data-var]").forEach(inp=>inp.oninput=()=>saveTheme({vars:{[inp.dataset.var]:inp.value}}));
-  document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>saveTheme({mode:b.dataset.mode}));
-  const radius=document.getElementById("radius"); radius.oninput=()=>saveTheme({radius:+radius.value});
-  document.getElementById("resetTheme").onclick=()=>{ tstore.set({}); document.documentElement.removeAttribute("style"); document.documentElement.setAttribute("data-theme","light"); syncTheme(); };
-  document.getElementById("resetAll").onclick=()=>{ if(!confirm("모든 내용을 비우고 기본 상태로 되돌릴까요? 되돌릴 수 없어요.")) return; state=defaultState(); save(true); renderAll(); toast("초기화했어요."); };
+  sw.querySelectorAll(".swatch").forEach(b=>b.onclick=()=>setVar("--accent",b.dataset.color));
+
+  document.querySelectorAll("input[type=color][data-var]").forEach(inp=>inp.oninput=()=>setVar(inp.dataset.var,inp.value));
+  document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
+  const radius=document.getElementById("radius");
+  radius.oninput=()=>{ const s=tstore.get(); s.radius=+radius.value; tstore.set(s); applyTheme(); };
+
+  document.getElementById("resetTheme").onclick=()=>{ tstore.set({});
+    VARS.concat(["--radius"]).forEach(v=>document.documentElement.style.removeProperty(v));
+    document.documentElement.setAttribute("data-theme","light"); applyTheme(); };
+  document.getElementById("resetAll").onclick=()=>{ if(!confirm("모든 내용을 비우고 기본 상태로 되돌릴까요? 되돌릴 수 없어요.")) return;
+    state=defaultState(); renderAll(); toast("초기화했어요."); };
+
   const panel=document.getElementById("panel"),backdrop=document.getElementById("backdrop");
   const open=()=>{panel.classList.add("open");backdrop.classList.add("open");}, close=()=>{panel.classList.remove("open");backdrop.classList.remove("open");};
   document.getElementById("themeBtn").onclick=open; document.getElementById("panelClose").onclick=close; backdrop.onclick=close;
   document.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
-  const s=tstore.get(); if(Object.keys(s).length)applyTheme({mode:s.mode,vars:s.vars,radius:s.radius}); syncTheme();
+  applyTheme();
 }
 
 /* 실수로 새로고침해 내용이 사라지는 것을 막기 위한 확인 (내용이 있을 때만) */
