@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Profile</title>
+<title>Timeline Pair Editor</title>
 <meta name="description" content="캐릭터 프로필 · 타임라인 · 관계를 정리하고 이미지로 저장하는 미니멀 에디터" />
+<link rel="icon" type="image/png" href="MOMO.png" />
+<link rel="apple-touch-icon" href="MOMO.png" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
 <link rel="stylesheet"
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
@@ -36,6 +38,10 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);lin
 .toolbar{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 80%,transparent);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
 .toolbar .inner{max-width:var(--maxw);margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+.brand{margin-right:auto;font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--muted);white-space:nowrap;}
+.brand a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:.15s;}
+.brand a:hover{border-bottom-color:var(--accent);}
+@media (max-width:520px){.brand{font-size:12px;}}
 .tbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border:1px solid var(--border);
   background:var(--surface);color:var(--text);border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;}
 .tbtn:hover{border-color:var(--accent);color:var(--accent);}
@@ -236,6 +242,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 
 <div class="toolbar">
   <div class="inner">
+    <span class="brand"><a href="https://dearmysn1p3r.tistory.com/78" target="_blank" rel="noopener">Timeline Pair</a> Editor</span>
     <button class="tbtn primary" id="saveImg"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>이미지로 저장</button>
     <button class="tbtn" id="themeBtn"><span class="dot"></span>테마</button>
   </div>
@@ -304,27 +311,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 /* =========================================================================
    저장  —  편집 내용/이미지는 이 브라우저에 자동 저장. 결과물은 [이미지로 저장].
    ========================================================================= */
-const KEY="profile.v3"; let saveTimer=null; let storageWarned=false;
-function store(){ try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return localStorage; }
-  catch(e){ try{ sessionStorage.setItem("__t","1"); sessionStorage.removeItem("__t"); return sessionStorage; }catch(e2){ return null; } } }
-function save(now){ clearTimeout(saveTimer);
-  const run=()=>{
-    const s=store();
-    if(!s){ if(!storageWarned){ storageWarned=true; toast("이 환경에서는 자동 저장이 안 돼요. 이미지로 저장해 두세요."); } return; }
-    try{ s.setItem(KEY,JSON.stringify(state)); }
-    catch(e){
-      // 용량 초과: 이미지를 뺀 텍스트만이라도 보존
-      try{
-        const lite=JSON.parse(JSON.stringify(state));
-        lite.people.forEach(p=>p.image=null); lite.banner={image:null,locked:false};
-        lite.relations.forEach(r=>{r.aImg=null;r.bImg=null;});
-        s.setItem(KEY,JSON.stringify(lite));
-        if(!storageWarned){ storageWarned=true; toast("이미지가 많아 사진은 저장되지 않았어요. 이미지로 저장해 두세요."); }
-      }catch(e2){ if(!storageWarned){ storageWarned=true; toast("저장 공간이 부족해요. 이미지로 저장해 두세요."); } }
-    }
-  };
-  now?run():(saveTimer=setTimeout(run,400)); }
-function load(){ try{ const s=store(); const r=s&&s.getItem(KEY); if(r) return JSON.parse(r);}catch(e){} return null; }
+/* 내용은 저장하지 않습니다 — 새로고침하면 항상 빈 상태로 시작합니다.
+   (작업물은 [이미지로 저장]으로 보관하세요. 테마 설정만 브라우저에 저장됩니다.) */
+function save(){ /* no-op: 세션 중에만 메모리에 유지 */ }
 
 const uid=()=>"id_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const blankPerson=()=>({id:uid(),name:"",role:"",image:null,shape:"square",locked:false,tags:[""],
@@ -339,7 +328,8 @@ const defaultState=()=>({
   timeline:[blankEvent(),blankEvent(),blankEvent(),blankEvent()],
   relations:[blankRel()] });
 
-let state=load()||defaultState();
+let state=defaultState();
+try{ localStorage.removeItem("profile.v3"); localStorage.removeItem("profile.v2"); localStorage.removeItem("profile.v1"); localStorage.removeItem("arch.v1"); localStorage.removeItem("arch.v2"); }catch(e){}
 /* 이전 버전 데이터 호환 */
 (function migrate(){
   if(!state.meta) state.meta={};
@@ -422,8 +412,7 @@ function buildViewer(person,opts){
     tools.append(el("button",{title:"구도 초기화",onclick:e=>{e.stopPropagation();person.image.scale=1;person.image.tx=0;person.image.ty=0;applyT();save();},html:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>'}));
     frame.append(tools);
     initPanZoom(frame,img,person);
-    function applyT(){ const i=person.image,w=frame.clientWidth,h=frame.clientHeight,mx=(i.scale-1)*w/2,my=(i.scale-1)*h/2;
-      i.tx=Math.max(-mx,Math.min(mx,i.tx)); i.ty=Math.max(-my,Math.min(my,i.ty)); img.style.transform=`translate(${i.tx}px,${i.ty}px) scale(${i.scale})`; }
+    function applyT(){ clampT(frame,img,person.image); }
     frame._bake=()=>{ const W=frame.clientWidth,H=frame.clientHeight,R=2,i=person.image;
       const c=el("canvas"); c.width=W*R; c.height=H*R; const ctx=c.getContext("2d"); ctx.scale(R,R);
       const iw=img.naturalWidth,ih=img.naturalHeight,cover=Math.max(W/iw,H/ih),dw=iw*cover,dh=ih*cover;
@@ -434,15 +423,23 @@ function buildViewer(person,opts){
   frame.addEventListener("drop",e=>{ e.preventDefault(); frame.classList.remove("dropping"); const f=[...e.dataTransfer.files].find(x=>x.type.startsWith("image/")); if(f) setImg(f); });
   return frame;
 }
+/* 실제 표시 크기(object-fit:cover) 기준으로 이동 범위 제한 — 빈 공간 없이 자유 이동 */
+function clampT(frame,img,i){
+  const W=frame.clientWidth,H=frame.clientHeight;
+  const iw=img.naturalWidth||W, ih=img.naturalHeight||H;
+  const cover=Math.max(W/iw,H/ih);
+  const dw=iw*cover*i.scale, dh=ih*cover*i.scale;
+  const mx=Math.max(0,(dw-W)/2), my=Math.max(0,(dh-H)/2);
+  i.tx=Math.max(-mx,Math.min(mx,i.tx)); i.ty=Math.max(-my,Math.min(my,i.ty));
+  img.style.transform=`translate(${i.tx}px,${i.ty}px) scale(${i.scale})`;
+}
 function zoomAt(frame,img,person,cxAbs,cyAbs,next){ const i=person.image; next=Math.max(1,Math.min(5,next));
   const r=frame.getBoundingClientRect(); const cx=cxAbs-r.left-r.width/2,cy=cyAbs-r.top-r.height/2,ratio=next/i.scale;
   i.tx=cx-ratio*(cx-i.tx); i.ty=cy-ratio*(cy-i.ty); i.scale=next;
-  const w=frame.clientWidth,h=frame.clientHeight,mx=(i.scale-1)*w/2,my=(i.scale-1)*h/2;
-  i.tx=Math.max(-mx,Math.min(mx,i.tx)); i.ty=Math.max(-my,Math.min(my,i.ty)); img.style.transform=`translate(${i.tx}px,${i.ty}px) scale(${i.scale})`; save(); }
+  clampT(frame,img,i); save(); }
 function initPanZoom(frame,img,person){ const i=person.image,pointers=new Map(); let lastDist=null;
   const locked=()=>!!person.locked;
-  const apply=()=>{ const w=frame.clientWidth,h=frame.clientHeight,mx=(i.scale-1)*w/2,my=(i.scale-1)*h/2;
-    i.tx=Math.max(-mx,Math.min(mx,i.tx)); i.ty=Math.max(-my,Math.min(my,i.ty)); img.style.transform=`translate(${i.tx}px,${i.ty}px) scale(${i.scale})`; };
+  const apply=()=>clampT(frame,img,i);
   frame.addEventListener("wheel",e=>{if(locked())return;e.preventDefault();zoomAt(frame,img,person,e.clientX,e.clientY,i.scale*Math.exp(-e.deltaY*0.0015));},{passive:false});
   frame.addEventListener("pointerdown",e=>{if(locked())return;frame.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)frame.classList.add("dragging");});
   frame.addEventListener("pointermove",e=>{ if(!pointers.has(e.pointerId))return; const p=pointers.get(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
@@ -638,6 +635,16 @@ function initTheme(){
   document.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
   const s=tstore.get(); if(Object.keys(s).length)applyTheme({mode:s.mode,vars:s.vars,radius:s.radius}); syncTheme();
 }
+
+/* 실수로 새로고침해 내용이 사라지는 것을 막기 위한 확인 (내용이 있을 때만) */
+window.addEventListener("beforeunload",e=>{
+  const hasText=[state.meta.title,state.meta.eyebrow,state.meta.summary,state.meta.footer]
+    .concat(state.people.flatMap(p=>[p.name,p.role,p.desc]))
+    .concat(state.timeline.flatMap(t=>[t.title,t.body]))
+    .some(v=>typeof v==="string"&&v.trim());
+  const hasImg=state.banner.image||state.people.some(p=>p.image)||state.relations.some(r=>r.aImg||r.bImg);
+  if(hasText||hasImg){ e.preventDefault(); e.returnValue=""; }
+});
 
 renderAll();
 initTheme();
