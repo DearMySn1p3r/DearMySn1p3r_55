@@ -39,8 +39,6 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);lin
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);}
 .toolbar .inner{max-width:var(--maxw);margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:8px;justify-content:flex-end;}
 .brand{margin-right:auto;font-size:13px;font-weight:700;letter-spacing:-.01em;color:var(--muted);white-space:nowrap;}
-.brand a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:.15s;}
-.brand a:hover{border-bottom-color:var(--accent);}
 @media (max-width:520px){.brand{font-size:12px;}}
 .tbtn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border:1px solid var(--border);
   background:var(--surface);color:var(--text);border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s;}
@@ -242,7 +240,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 
 <div class="toolbar">
   <div class="inner">
-    <span class="brand"><a href="https://dearmysn1p3r.tistory.com/78" target="_blank" rel="noopener">Timeline Pair</a> Editor</span>
+    <span class="brand">Timeline Pair Editor</span>
     <button class="tbtn primary" id="saveImg"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>이미지로 저장</button>
     <button class="tbtn" id="themeBtn"><span class="dot"></span>테마</button>
   </div>
