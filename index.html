@@ -400,7 +400,8 @@ function buildViewer(person,opts){
     html:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="13" height="13" rx="3.5"/><circle cx="16" cy="16" r="5.5"/></svg>'});
   if(!person.image){
     frame.append(el("div",{class:"empty",onclick:pick},[el("div",{class:"plus"},"+"),el("span",{},"이미지 추가\n클릭 · 드래그")]));
-    const tools=el("div",{class:"v-tools"}); if(opts.shapeToggle!==false) tools.append(shapeBtn()); frame.append(tools);
+    const tools=el("div",{class:"v-tools"}); if(opts.shapeToggle!==false) tools.append(shapeBtn());
+    tools.addEventListener("pointerdown",e=>e.stopPropagation()); frame.append(tools);
   } else {
     frame.classList.add("has-img");
     const img=el("img",{src:person.image.src,alt:person.name||"",draggable:"false"}); frame.append(img);
@@ -409,6 +410,7 @@ function buildViewer(person,opts){
     if(opts.shapeToggle!==false) tools.append(shapeBtn());
     tools.append(lockBtn());
     tools.append(el("button",{title:"구도 초기화",onclick:e=>{e.stopPropagation();person.image.scale=1;person.image.tx=0;person.image.ty=0;applyT();save();},html:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>'}));
+    tools.addEventListener("pointerdown",e=>e.stopPropagation());
     frame.append(tools);
     initPanZoom(frame,img,person);
     function applyT(){ layout(frame,img,person.image); }
@@ -446,7 +448,7 @@ function initPanZoom(frame,img,person){ const i=person.image,pointers=new Map();
   const locked=()=>!!person.locked;
   const apply=()=>layout(frame,img,i);
   frame.addEventListener("wheel",e=>{if(locked())return;e.preventDefault();zoomAt(frame,img,person,e.clientX,e.clientY,i.scale*Math.exp(-e.deltaY*0.0015));},{passive:false});
-  frame.addEventListener("pointerdown",e=>{if(locked())return;frame.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)frame.classList.add("dragging");});
+  frame.addEventListener("pointerdown",e=>{if(locked())return;if(e.target.closest&&e.target.closest(".v-tools"))return;frame.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)frame.classList.add("dragging");});
   frame.addEventListener("pointermove",e=>{ if(!pointers.has(e.pointerId))return; const p=pointers.get(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pointers.size===1){ i.tx+=e.clientX-p.x; i.ty+=e.clientY-p.y; apply(); save(); }
     else if(pointers.size===2){ const pts=[...pointers.values()]; const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),mx=(pts[0].x+pts[1].x)/2,my=(pts[0].y+pts[1].y)/2; if(lastDist!=null)zoomAt(frame,img,person,mx,my,i.scale*(d/lastDist)); lastDist=d; } });
