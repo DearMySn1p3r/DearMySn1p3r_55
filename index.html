@@ -472,7 +472,9 @@ function buildViewer(person,opts){
    이동 범위는 "프레임 밖으로 남은 부분"만큼만 허용 → 빈 공간이 절대 생기지 않습니다. */
 function layout(frame,img,i){
   const W=frame.clientWidth||1, H=frame.clientHeight||1;
-  const iw=img.naturalWidth||W, ih=img.naturalHeight||H;
+  const iw=img.naturalWidth, ih=img.naturalHeight;
+  // 아직 이미지가 로드되지 않았다면 계산하지 않는다 (구도가 초기화되는 것을 방지)
+  if(!iw||!ih){ img.style.transform=`translate(-50%,-50%) translate(${i.tx}px,${i.ty}px)`; return; }
   const cover=Math.max(W/iw,H/ih);          // 프레임을 꽉 채우는 최소 배율
   const dw=iw*cover*i.scale, dh=ih*cover*i.scale;   // 실제 표시 크기(원본 비율 유지)
   const mx=Math.max(0,(dw-W)/2), my=Math.max(0,(dh-H)/2); // 숨겨진 여유분 = 이동 가능 범위
@@ -498,7 +500,9 @@ function initPanZoom(frame,img,person){ const i=person.image,pointers=new Map();
   frame.addEventListener("dblclick",e=>{ if(locked())return; if(i.scale>1.05){i.scale=1;i.tx=0;i.ty=0;apply();save();} else zoomAt(frame,img,person,e.clientX,e.clientY,2.2); });
   frame.addEventListener("keydown",e=>{ if(locked())return; const s=24,m={ArrowLeft:[s,0],ArrowRight:[-s,0],ArrowUp:[0,s],ArrowDown:[0,-s]}; if(m[e.key]){e.preventDefault();i.tx+=m[e.key][0];i.ty+=m[e.key][1];apply();save();} });
   if(window.ResizeObserver){ const ro=new ResizeObserver(()=>apply()); ro.observe(frame); }
-  img.complete?apply():img.addEventListener("load",apply);
+  img.addEventListener("load",apply);
+  if(img.complete&&img.naturalWidth) apply();
+  else if(img.decode) img.decode().then(apply).catch(()=>{});
 }
 
 /* =========================================================================
