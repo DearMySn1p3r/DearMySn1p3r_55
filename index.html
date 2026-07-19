@@ -176,10 +176,14 @@ textarea.inp{resize:none;overflow:hidden;line-height:1.6;display:block;}
 .rel-item{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;padding:16px 4px;}
 .rel-item + .rel-item{border-top:1px solid var(--border);}
 .rel-node{display:flex;flex-direction:column;align-items:center;gap:7px;flex:0 0 auto;width:84px;}
-.rel-ava{width:72px;height:72px;border-radius:50%;background:var(--surface-2) center/cover no-repeat;display:grid;place-items:center;cursor:pointer;border:1px solid var(--border);transition:.15s;}
-.rel-ava:hover{border-color:var(--accent);}
-.rel-ava.drop{outline:2px dashed var(--accent);outline-offset:2px;}
-.rel-ava .ph{color:var(--muted);font-size:19px;opacity:.6;line-height:1;}
+.viewer.rel-ava{width:72px;height:72px;aspect-ratio:auto;border-radius:50%;border:1px solid var(--border);flex:0 0 auto;}
+.viewer.rel-ava .empty{gap:0;}
+.viewer.rel-ava .empty .plus{width:22px;height:22px;font-size:14px;}
+.viewer.rel-ava .empty span{display:none;}
+.viewer.rel-ava .v-tools{left:50%;right:auto;transform:translateX(-50%);bottom:3px;gap:3px;opacity:0;}
+.viewer.rel-ava:hover .v-tools,.viewer.rel-ava:focus-within .v-tools{opacity:1;}
+.viewer.rel-ava .v-tools button{width:21px;height:21px;border-radius:7px;}
+.viewer.rel-ava .v-tools svg{width:11px;height:11px;}
 .inp.rel-name{text-align:center;font-size:12px;font-weight:700;}
 /* 아바타(72px) 중앙에 정렬 — 이름줄 높이만큼 위로 */
 .rel-mid{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;max-width:170px;
@@ -222,7 +226,7 @@ textarea.inp{resize:none;overflow:hidden;line-height:1.6;display:block;}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(18px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:.22s;z-index:70;box-shadow:0 8px 24px rgba(0,0,0,.18);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 body.exporting .v-tools,body.exporting .card-x,body.exporting .ev-tools,body.exporting .add,
-body.exporting .viewer .empty,body.exporting .rel-x,body.exporting .rel-ava .ph{display:none!important;}
+body.exporting .viewer .empty,body.exporting .rel-x{display:none!important;}
 body.exporting .tag .x{display:none!important;}
 body.exporting .tag{padding:0 9px!important;}
 body.exporting .inp{box-shadow:none!important;background:transparent!important;}
@@ -256,7 +260,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
   .banner{aspect-ratio:16/9;}
   .tl-card,.summary-box{padding:16px;}
   .rel-item{gap:8px;padding:14px 2px;}
-  .rel-node{width:74px;} .rel-ava{width:64px;height:64px;}
+  .rel-node{width:74px;} .viewer.rel-ava{width:64px;height:64px;}
   .rel-mid{max-width:130px;} .rel-arrow{width:44px;}
   .panel{width:100%;border-left:0;}
 }
@@ -351,7 +355,7 @@ const blankPerson=()=>({id:uid(),name:"",role:"",image:null,shape:"square",locke
   fields:[{label:"",value:""},{label:"",value:""},{label:"",value:""},{label:"",value:""}],desc:""});
 const blankEvent=()=>({id:uid(),title:"",body:""});
 /* relTo = A가 B에게 가는 관계, relFrom = B가 A에게 오는 관계 */
-const blankRel=()=>({id:uid(),aName:"",aImg:null,bName:"",bImg:null,relTo:"",relFrom:""});
+const blankRel=()=>({id:uid(),aName:"",aImg:null,aLocked:false,bName:"",bImg:null,bLocked:false,relTo:"",relFrom:""});
 const defaultState=()=>({
   meta:{eyebrow:"",title:"",summary:"",footer:""},
   banner:{image:null,locked:false},
@@ -375,6 +379,9 @@ try{ localStorage.removeItem("profile.v3"); localStorage.removeItem("profile.v2"
     if(typeof r.relTo!=="string") r.relTo=typeof r.rel==="string"?r.rel:"";
     if(typeof r.relFrom!=="string") r.relFrom="";
     delete r.rel;
+    ["a","b"].forEach(s=>{ const k=s+"Img";
+      if(typeof r[k]==="string") r[k]={src:r[k],scale:1,tx:0,ty:0};
+      if(typeof r[s+"Locked"]!=="boolean") r[s+"Locked"]=false; });
   });
 })();
 
@@ -387,7 +394,9 @@ function el(tag,props={},kids=[]){ const n=document.createElement(tag);
   (Array.isArray(kids)?kids:[kids]).forEach(c=>c!=null&&n.append(c.nodeType?c:document.createTextNode(c)));
   return n; }
 const X=`<path d="M6 6l12 12M18 6L6 18"/>`;
-function autoGrow(t){t.style.height="auto";t.style.height=t.scrollHeight+"px";}
+function autoGrow(t){ t.style.height="auto"; t.style.height=t.scrollHeight+"px"; }
+/* 글꼴 로딩·창 크기 변경 후에는 줄 높이가 달라지므로 다시 계산한다 */
+function growAll(){ document.querySelectorAll("textarea.inp").forEach(autoGrow); }
 function field({value,placeholder,cls,multiline,onInput}){
   const n=document.createElement(multiline?"textarea":"input");
   if(!multiline)n.type="text";
@@ -415,7 +424,7 @@ function buildViewer(person,opts){
   const frame=el("div",{class:baseClass+(opts.shapeToggle!==false&&person.shape==="circle"?" circle":""),tabindex:"0",role:"img","aria-label":"이미지"});
   const hidden=el("input",{type:"file",accept:"image/*",style:"display:none"}); frame.append(hidden);
   const pick=()=>hidden.click();
-  const setImg=async f=>{ try{ const src=await fileToImage(f); person.image={src,scale:1,tx:0,ty:0}; save(true); rerender(); }
+  const setImg=async f=>{ try{ const src=await fileToImage(f,opts.maxDim||1000,opts.quality||0.82); person.image={src,scale:1,tx:0,ty:0}; save(true); rerender(); }
     catch(e){ toast("이미지를 불러오지 못했어요."); } };
   hidden.addEventListener("change",()=>{ if(hidden.files[0]) setImg(hidden.files[0]); });
   const lockBtn=()=>{ const b=el("button",{title:person.locked?"잠금 해제":"위치 잠금"});
@@ -441,7 +450,7 @@ function buildViewer(person,opts){
     tools.append(el("button",{title:"사진 바꾸기",onclick:e=>{e.stopPropagation();pick();},html:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5-6 6"/></svg>'}));
     if(opts.shapeToggle!==false) tools.append(shapeBtn());
     tools.append(lockBtn());
-    tools.append(el("button",{title:"구도 초기화",onclick:e=>{e.stopPropagation();person.image.scale=1;person.image.tx=0;person.image.ty=0;applyT();save();},html:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>'}));
+    if(!opts.compact) tools.append(el("button",{title:"구도 초기화",onclick:e=>{e.stopPropagation();person.image.scale=1;person.image.tx=0;person.image.ty=0;applyT();save();},html:'<svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>'}));
     tools.addEventListener("pointerdown",e=>e.stopPropagation());
     frame.append(tools);
     initPanZoom(frame,img,person);
@@ -554,20 +563,16 @@ function renderTimeline(){
     wrap.append(box);
   });
 }
+function relOwner(rel,side){
+  const ik=side+"Img", lk=side+"Locked";
+  return { get image(){return rel[ik];}, set image(v){rel[ik]=v;},
+           get locked(){return !!rel[lk];}, set locked(v){rel[lk]=v;},
+           get name(){return rel[side+"Name"]||"";}, shape:"circle" };
+}
 function relAvatarNode(rel,side){
-  const imgKey=side+"Img", nameKey=side+"Name";
   const node=el("div",{class:"rel-node"});
-  const av=el("div",{class:"rel-ava",title:"클릭해서 이미지 추가"});
-  const file=el("input",{type:"file",accept:"image/*",style:"display:none"});
-  const set=async f=>{ try{ rel[imgKey]=await fileToImage(f,420,.8); save(true); renderRelations(); }catch(e){ toast("이미지를 불러오지 못했어요."); } };
-  file.addEventListener("change",()=>{ if(file.files[0]) set(file.files[0]); });
-  if(rel[imgKey]) av.style.backgroundImage=`url(${rel[imgKey]})`; else av.append(el("span",{class:"ph"},"+"));
-  av.addEventListener("click",()=>file.click());
-  av.addEventListener("dragover",e=>{e.preventDefault();av.classList.add("drop");});
-  av.addEventListener("dragleave",()=>av.classList.remove("drop"));
-  av.addEventListener("drop",e=>{ e.preventDefault(); av.classList.remove("drop"); const f=[...e.dataTransfer.files].find(x=>x.type.startsWith("image/")); if(f) set(f); });
-  av.append(file); node.append(av);
-  node.append(field({value:rel[nameKey],placeholder:"Character",cls:"rel-name",onInput:v=>rel[nameKey]=v}));
+  node.append(buildViewer(relOwner(rel,side),{className:"viewer rel-ava",shapeToggle:false,compact:true,maxDim:520,quality:0.82,rerender:renderRelations}));
+  node.append(field({value:rel[side+"Name"],placeholder:"Character",cls:"rel-name",onInput:v=>rel[side+"Name"]=v}));
   return node;
 }
 function renderRelations(){
@@ -598,7 +603,11 @@ function renderBanner(){
   const slot=document.getElementById("bannerSlot"); slot.innerHTML="";
   slot.append(buildViewer(state.banner,{className:"viewer banner",shapeToggle:false,rerender:renderBanner}));
 }
-function renderAll(){ renderMeta(); renderSummary(); renderPeople(); renderTimeline(); renderRelations(); renderBanner(); }
+function renderAll(){ renderMeta(); renderSummary(); renderPeople(); renderTimeline(); renderRelations(); renderBanner();
+  requestAnimationFrame(growAll); }
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>requestAnimationFrame(growAll));
+let growTimer=null;
+window.addEventListener("resize",()=>{ clearTimeout(growTimer); growTimer=setTimeout(growAll,120); });
 
 /* ---------- 추가 버튼 ---------- */
 document.getElementById("addPerson").onclick=()=>{ state.people.push(blankPerson()); save(true); renderPeople(); };
@@ -634,6 +643,7 @@ async function saveImage(){
   if(!ok){ btn.disabled=false; toast("저장 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요."); return; }
   const target=document.getElementById("capture"); document.body.classList.add("exporting");
   const baked=[], swaps=[];
+  growAll();
   // 저장 모드로 바뀌며 폭이 달라질 수 있으므로 배치가 안정된 뒤에 이미지를 굽는다
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   document.querySelectorAll(".viewer.has-img").forEach(frame=>{ if(!frame._bake) return; const img=frame.querySelector("img");
