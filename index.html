@@ -1039,9 +1039,20 @@ function setupHex(){
    OOC 문구 모음 — 복사 · 편집 · 추가 (이 브라우저에 저장, 이미지 저장에는 포함 안 됨)
    ========================================================================= */
 const OOC_KEY="tpe.ooc.v1";
-const OOC_DEFAULTS=[{"title": "서사 요약 · 네 파트", "text": "*[OOC: 이전 RP 중지. 새로운 상황 전개. 두 사람의 서사를 네 파트로 나눠서 요약 및 서술할 것. 각각의 서사에는 소제목이 들어가야 하며 파트별로 150자를 넘지 않아야 한다. PC/NPC의 주요 대사와 감정선도 작성하고, PC와 NPC의 설정, 페르소나, 세계관, 로어북, 장기기억을 적극적으로 참고하여 기술한다. 상단에는 두 사람을 대표하는 캐치프레이즈와 모든 관계성을 정리한 짧은 글을 넣는다.]*"}, {"title": "NPC 프로필 문서 · HTML", "text": "*[OOC: 이전 RP 중지. 새로운 상황 전개. NPC의 이름, 코드네임, 외형, 성격, 특징, PC와의 관계와 짧은 소개글 등 NPC의 페르소나와 장기기억에 존재하는 모든 항목을 정리하여 ‘프로필 문서’ 형식의 HTML로 출력한다. div, span, 인라인 스타일을 사용해 기록 문서처럼 시각적으로 구성하고, 전체 내용을 백틱으로 감싼다.]*"}];
-function oocLoad(){ try{ const v=JSON.parse(localStorage.getItem(OOC_KEY)||"null"); if(Array.isArray(v)) return v; }catch(e){}
-  return OOC_DEFAULTS.map(o=>({id:uid(),...o})); }
+const OOC_DEFAULTS=[{"id": "def-story", "title": "서사 요약 · 네 파트", "text": "*[OOC: 이전 RP 중지. 새로운 상황 전개. 두 사람의 서사를 네 파트로 나눠서 요약 및 서술할 것. 각각의 서사에는 소제목이 들어가야 하며 파트별로 150자를 넘지 않아야 한다. PC/NPC의 주요 대사와 감정선도 작성하고, PC와 NPC의 설정, 페르소나, 세계관, 로어북, 장기기억을 적극적으로 참고하여 기술한다. 상단에는 두 사람을 대표하는 캐치프레이즈와 모든 관계성을 정리한 짧은 글을 넣는다.]*"}, {"id": "def-npc", "title": "NPC 프로필 문서 · HTML", "text": "*[OOC: 이전 RP 중지. 새로운 상황 전개. NPC의 이름, 코드네임, 외형, 성격, 특징, PC와의 관계와 짧은 소개글 등 NPC의 페르소나와 장기기억에 존재하는 모든 항목을 정리하여 ‘프로필 문서’ 형식의 HTML로 출력한다. div, span, 인라인 스타일을 사용해 기록 문서처럼 시각적으로 구성하고, 전체 내용을 백틱으로 감싼다.]*"}, {"id": "def-pc", "title": "PC 프로필 문서 · HTML", "text": "*[OOC: 이전 RP 중지. 새로운 상황 전개. PC의 이름, 코드네임, 외형, 성격, 특징, NPC와의 관계와 짧은 소개글 등 PC의 페르소나와 장기기억에 존재하는 모든 항목을 정리하여 ‘프로필 문서’ 형식의 HTML로 출력한다. div, span, 인라인 스타일을 사용해 기록 문서처럼 시각적으로 구성하고, 전체 내용을 백틱으로 감싼다.]*"}];
+const OOC_SEEN="tpe.ooc.seen";
+function oocLoad(){
+  let list=null, seen=[];
+  try{ const v=JSON.parse(localStorage.getItem(OOC_KEY)||"null"); if(Array.isArray(v)) list=v; }catch(e){}
+  try{ seen=JSON.parse(localStorage.getItem(OOC_SEEN)||"[]"); }catch(e){}
+  if(!list){ list=OOC_DEFAULTS.map(o=>({...o})); seen=OOC_DEFAULTS.map(o=>o.id); }
+  else{
+    if(!seen.length){ // 이전 버전: 처음 두 기본 문구는 이미 본 것으로 처리
+      seen=["def-story","def-npc"]; list.forEach((o,i)=>{ if(i<2&&!String(o.id).startsWith("def-")&&OOC_DEFAULTS[i]&&o.text===OOC_DEFAULTS[i].text) o.id=OOC_DEFAULTS[i].id; }); }
+    OOC_DEFAULTS.forEach(d=>{ if(!seen.includes(d.id)){ if(!list.some(o=>o.id===d.id)) list.push({...d}); seen.push(d.id); } });
+  }
+  try{ localStorage.setItem(OOC_SEEN,JSON.stringify(seen)); localStorage.setItem(OOC_KEY,JSON.stringify(list)); }catch(e){}
+  return list; }
 function oocSave(){ try{ localStorage.setItem(OOC_KEY,JSON.stringify(oocItems)); }catch(e){} }
 let oocItems=oocLoad();
 async function copyText(t){
@@ -1078,8 +1089,8 @@ function setupOOC(){
   document.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
   document.getElementById("oocAdd").onclick=()=>{ oocItems.push({id:uid(),title:"",text:""}); oocSave(); renderOOC();
     const t=[...document.querySelectorAll("#oocList .ooc-text")].pop(); if(t) t.focus(); };
-  document.getElementById("oocReset").onclick=()=>{ if(!confirm("OOC 문구를 기본 두 개로 되돌릴까요? 직접 고치거나 추가한 내용은 사라져요.")) return;
-    oocItems=OOC_DEFAULTS.map(o=>({id:uid(),...o})); oocSave(); renderOOC(); toast("기본 문구로 되돌렸어요."); };
+  document.getElementById("oocReset").onclick=()=>{ if(!confirm("OOC 문구를 기본 문구로 되돌릴까요? 직접 고치거나 추가한 내용은 사라져요.")) return;
+    oocItems=OOC_DEFAULTS.map(o=>({...o})); oocSave(); try{ localStorage.setItem(OOC_SEEN,JSON.stringify(OOC_DEFAULTS.map(o=>o.id))); }catch(e){} renderOOC(); toast("기본 문구로 되돌렸어요."); };
   // 테마 패널을 열 때 OOC 패널은 닫기
   document.getElementById("themeBtn").addEventListener("click",()=>panel.classList.remove("open"));
 }
