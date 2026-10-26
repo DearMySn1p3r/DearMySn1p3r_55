@@ -435,6 +435,50 @@ body.exporting .viewer:not(.has-img){background:var(--surface-2);}
 }
 @media(max-width:380px){ .toolbar .tbtn .ic,.toolbar .tbtn .dot{display:none;} }
 
+/* ---------- 캐릭터 색 ---------- */
+:root{--c1:var(--accent);--c2:var(--accent);--c1-tint:var(--accent-tint);--c2-tint:var(--accent-tint);--c1-line:var(--accent-line);--c2-line:var(--accent-line);}
+.person{--pc:var(--accent);--pc-tint:var(--accent-tint);--pc-line:var(--accent-line);}
+.person{border-top-color:var(--pc)!important;}
+.person .tag{color:var(--pc);border-color:var(--pc-line);}
+.person .tag .x{color:var(--pc);}
+.person .inp:focus{box-shadow:0 0 0 2px var(--pc-line);}
+.pc-ctrl{position:absolute;top:12px;right:44px;display:flex;align-items:center;gap:4px;z-index:3;}
+.pc-swatch{position:relative;width:20px;height:20px;border-radius:50%;background:var(--pc);box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--pc-line);cursor:pointer;overflow:hidden;}
+.pc-swatch input{position:absolute;inset:-6px;width:32px;height:32px;opacity:0;cursor:pointer;border:0;padding:0;}
+.pc-reset{border:0;background:transparent;color:var(--muted);font-size:10.5px;font-weight:600;cursor:pointer;padding:2px 4px;border-radius:6px;}
+.pc-reset:hover{color:var(--pc);}
+body.exporting .pc-ctrl{display:none!important;}
+
+/* 관계: 화살표는 각자 색, 관계 글씨는 기본 글자색 */
+.inp.rel-label{color:var(--text)!important;}
+.rel-line.to .rel-arrow{stroke:var(--c1);}
+.rel-line.from .rel-arrow{stroke:var(--c2);}
+.rel-item .rel-node:first-of-type .viewer.rel-ava{border-color:var(--c1-line);}
+.rel-item .rel-node:last-of-type .viewer.rel-ava{border-color:var(--c2-line);}
+
+/* ---------- 그라데이션 모드 ---------- */
+body.pair-grad .rel-card{border-top:0!important;background:linear-gradient(90deg,var(--c1),var(--c2)) top left/100% 2px no-repeat,var(--surface);}
+body.pair-grad #mhEyebrow::before{background:linear-gradient(90deg,var(--c1),var(--c2));}
+body.pair-grad .toolbar .tbtn.primary{background:linear-gradient(110deg,var(--c1),var(--c2));border-color:transparent;}
+body.pair-grad .toolbar .brand i{color:var(--c2);}
+body.pair-grad .timeline{position:relative;}
+body.pair-grad .timeline::before{display:block;content:"";position:absolute;left:0;right:0;top:0;bottom:auto;width:auto;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,var(--c1),var(--c2));}
+body.pair-grad .event{border-top-color:transparent;}
+body.pair-grad .event:nth-child(odd)::before{border-color:var(--c1);}
+body.pair-grad .event:nth-child(even)::before{border-color:var(--c2);}
+body.pair-grad .event:nth-child(odd)::after{color:var(--c1);}
+body.pair-grad .event:nth-child(even)::after{color:var(--c2);}
+@media(max-width:560px){
+  body.pair-grad .timeline::before{top:0;bottom:0;right:auto;left:6px;width:2px;height:auto;background:linear-gradient(180deg,var(--c1),var(--c2));}
+  body.pair-grad .event{border-left-color:transparent;}
+}
+
+/* 초기화 버튼(아이콘만) */
+.toolbar .tbtn.icon-only{padding:8px 10px;}
+.toolbar .tbtn.icon-only .ic{margin:0;display:block!important;}
+@media(max-width:420px){ .toolbar .inner{gap:5px;} .toolbar .tbtn{padding:8px 9px;} .toolbar .brand{font-size:13px;} }
+
 </style>
 </head>
 <body>
@@ -443,7 +487,9 @@ body.exporting .viewer:not(.has-img){background:var(--surface-2);}
   <span class="brand" aria-label="Timeline Pair Editor">Timeline<i>·</i>Pair<small>Editor</small></span>
   <button class="tbtn primary" id="saveImg" title="이미지(PNG)로 저장"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>PNG</button>
   <button class="tbtn" id="oocBtn" title="OOC 문구 모음"><svg class="ic" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg>OOC</button>
-  <button class="tbtn" id="themeBtn" title="테마 설정"><span class="dot"></span>THEME</button></div></div>
+  <button class="tbtn" id="themeBtn" title="테마 설정"><span class="dot"></span>THEME</button>
+  <button class="tbtn icon-only" id="resetBtn" title="초기화 (모든 내용 지우기)" aria-label="초기화"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg></button>
+  </div></div>
 <main class="sheet" id="capture">
   <header class="top">
     <div class="photo"><div id="bannerSlot"></div></div>
@@ -475,6 +521,10 @@ body.exporting .viewer:not(.has-img){background:var(--surface-2);}
     <div class="color-row"><span>포인트</span><span class="cpick"><input type="text" class="hex" data-hexvar="--accent" maxlength="7" spellcheck="false"><input type="color" data-var="--accent"></span></div>
     <div class="color-row"><span>경계선</span><span class="cpick"><input type="text" class="hex" data-hexvar="--border" maxlength="7" spellcheck="false"><input type="color" data-var="--border"></span></div>
     </div>
+  
+  <div class="field"><label>두 캐릭터 색 그라데이션</label>
+    <p class="sub" style="margin:-4px 0 10px">켜면 관계·타임라인 선·라벨 선·PNG 버튼처럼 한 가지 색이던 곳이 첫 번째 → 두 번째 캐릭터 색으로 이어져요. 캐릭터 색은 각 인물 카드 오른쪽 위 동그라미에서 정해요.</p>
+    <div style="display:flex;gap:8px"><button class="ghost" data-grad="off">끄기</button><button class="ghost" data-grad="on">켜기</button></div></div>
   <div class="field"><label>모서리 둥글기 <span id="radiusVal" style="color:var(--muted)"></span></label>
     <input type="range" id="radius" min="0" max="34" step="1"></div>
   <div class="field"><button class="ghost" id="resetTheme">테마 기본값으로</button></div>
@@ -498,7 +548,7 @@ body.exporting .viewer:not(.has-img){background:var(--surface-2);}
    ========================================================================= */
 /* 내용은 저장하지 않습니다 — 새로고침하면 항상 빈 상태로 시작합니다.
    (작업물은 [이미지로 저장]으로 보관하세요. 테마 설정만 브라우저에 저장됩니다.) */
-function save(){ /* no-op: 세션 중에만 메모리에 유지 */ }
+
 
 const uid=()=>"id_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const blankPerson=()=>({id:uid(),name:"",role:"",image:null,shape:"square",locked:false,tags:[""],
@@ -910,7 +960,7 @@ function applyPalette(name){ const p=PALETTES[name]; if(!p) return;
   s[p.mode]={...p.vars,"--on-accent":onAccent(p.vars["--accent"])};
   tstore.set(s); applyTheme(); }
 
-function syncTheme(){ setTimeout(()=>window.syncHex&&syncHex(),0);
+function syncTheme(){ setTimeout(()=>{ window.syncHex&&syncHex(); if(window.__pairReady) applyPair(); },0);
   document.querySelectorAll("input[type=color][data-var]").forEach(inp=>inp.value=readVar(inp.dataset.var));
   const rad=parseInt(getComputedStyle(document.documentElement).getPropertyValue("--radius"))||18;
   const r=document.getElementById("radius"); if(r){ r.value=rad; document.getElementById("radiusVal").textContent=rad+"px"; }
@@ -952,7 +1002,7 @@ function initTheme(){
 }
 
 /* 실수로 새로고침해 내용이 사라지는 것을 막기 위한 확인 (내용이 있을 때만) */
-window.addEventListener("beforeunload",e=>{
+window.addEventListener("beforeunload",e=>{ if(__saveTimer) saveNow(); if(!window.__saveFailed) return;
   const hasText=[state.meta.title,state.meta.eyebrow,state.meta.summary,state.meta.footer]
     .concat(state.people.flatMap(p=>[p.name,p.role,p.desc]))
     .concat(state.timeline.flatMap(t=>[t.title,t.body]))
@@ -1034,10 +1084,92 @@ function setupOOC(){
   document.getElementById("themeBtn").addEventListener("click",()=>panel.classList.remove("open"));
 }
 
+/* =========================================================================
+   자동 저장 (IndexedDB · 사진 포함) + 초기화
+   ========================================================================= */
+const DB_NAME="tpe-data", DB_STORE="kv", DB_KEY="state.v1";
+function idb(){ return new Promise((res,rej)=>{ if(!window.indexedDB) return rej(new Error("no idb"));
+  const r=indexedDB.open(DB_NAME,1); r.onupgradeneeded=()=>r.result.createObjectStore(DB_STORE); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function dbGet(){ try{ const db=await idb(); return await new Promise((res,rej)=>{ const q=db.transaction(DB_STORE).objectStore(DB_STORE).get(DB_KEY);
+  q.onsuccess=()=>res(q.result||null); q.onerror=()=>rej(q.error); }); }
+  catch(e){ try{ return JSON.parse(localStorage.getItem("tpe."+DB_KEY)||"null"); }catch(_){ return null; } } }
+async function dbPut(v){ try{ const db=await idb(); await new Promise((res,rej)=>{ const t=db.transaction(DB_STORE,"readwrite");
+  t.objectStore(DB_STORE).put(v,DB_KEY); t.oncomplete=res; t.onerror=()=>rej(t.error); }); return true; }
+  catch(e){ try{ localStorage.setItem("tpe."+DB_KEY,JSON.stringify(v)); return true; }catch(_){ return false; } } }
+async function dbDel(){ try{ const db=await idb(); await new Promise(res=>{ const t=db.transaction(DB_STORE,"readwrite"); t.objectStore(DB_STORE).delete(DB_KEY); t.oncomplete=res; t.onerror=res; }); }catch(e){}
+  try{ localStorage.removeItem("tpe."+DB_KEY); }catch(e){} }
+let __saveTimer=null, __loaded=false; window.__saveFailed=false;
+function save(){ if(!__loaded) return; clearTimeout(__saveTimer); __saveTimer=setTimeout(saveNow,400); }
+async function saveNow(){ clearTimeout(__saveTimer); __saveTimer=null; if(!__loaded) return;
+  const ok=await dbPut(JSON.parse(JSON.stringify(state)));
+  if(!ok&&!window.__saveFailed) toast("자동 저장에 실패했어요. 저장 공간이 부족할 수 있어요.");
+  window.__saveFailed=!ok; }
+window.addEventListener("pagehide",()=>{ if(__saveTimer) saveNow(); });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"&&__saveTimer) saveNow(); });
+
+function normalizeState(s){
+  const d=defaultState(); if(!s||typeof s!=="object") return d;
+  s.meta=Object.assign({eyebrow:"",title:"",summary:"",footer:""},s.meta||{});
+  if(!s.banner||typeof s.banner!=="object") s.banner={image:null,locked:false};
+  ["people","timeline","relations"].forEach(k=>{ if(!Array.isArray(s[k])||!s[k].length) s[k]=d[k]; });
+  s.people=s.people.map(p=>Object.assign(blankPerson(),p,{tags:Array.isArray(p.tags)?p.tags:[""],fields:Array.isArray(p.fields)?p.fields:[]}));
+  s.timeline=s.timeline.map(t=>Object.assign(blankEvent(),t));
+  s.relations=s.relations.map(r=>Object.assign(blankRel(),r));
+  return s;
+}
+async function resetContent(){
+  if(!confirm("모든 내용(글·사진)을 지우고 처음 상태로 되돌릴까요?\n저장된 작업도 함께 지워지고, 되돌릴 수 없어요.")) return;
+  clearTimeout(__saveTimer); __saveTimer=null;
+  state=defaultState(); await dbDel(); renderAll(); applyPair(); toast("초기화했어요.");
+}
+
+/* =========================================================================
+   캐릭터 색 + 두 캐릭터 그라데이션
+   ========================================================================= */
+function pcVars(hex){ const a=readVar("--accent"); const c=hex||a;
+  return {c, tint:tintAccent(c,0.09)||"var(--accent-tint)", line:tintAccent(c,0.38)||"var(--accent-line)"}; }
+function applyPair(){
+  const root=document.documentElement;
+  const v1=pcVars(state.people[0]&&state.people[0].color), v2=pcVars(state.people[1]&&state.people[1].color);
+  root.style.setProperty("--c1",v1.c); root.style.setProperty("--c1-tint",v1.tint); root.style.setProperty("--c1-line",v1.line);
+  root.style.setProperty("--c2",v2.c); root.style.setProperty("--c2-tint",v2.tint); root.style.setProperty("--c2-line",v2.line);
+  document.querySelectorAll("#people > .person").forEach((card,i)=>{ const p=state.people[i]; if(!p) return; const v=pcVars(p.color);
+    card.style.setProperty("--pc",v.c); card.style.setProperty("--pc-tint",v.tint); card.style.setProperty("--pc-line",v.line);
+    const inp=card.querySelector(".pc-swatch input"); if(inp) inp.value=v.c;
+    const rs=card.querySelector(".pc-reset"); if(rs) rs.style.display=p.color?"":"none"; });
+  const g=!!(tstore.get().pairGrad); document.body.classList.toggle("pair-grad",g);
+  document.querySelectorAll("[data-grad]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.grad==="on")===g?"true":"false"));
+}
+const __renderPeopleBase=renderPeople;
+renderPeople=function(){
+  __renderPeopleBase();
+  document.querySelectorAll("#people > .person").forEach((card,i)=>{ const p=state.people[i]; if(!p) return;
+    const sw=el("label",{class:"pc-swatch",title:"캐릭터 색 정하기"});
+    const inp=el("input",{type:"color","aria-label":"캐릭터 색"});
+    inp.addEventListener("input",()=>{ p.color=inp.value.toLowerCase(); applyPair(); save(); });
+    sw.append(inp);
+    const rs=el("button",{class:"pc-reset",title:"테마 색으로 되돌리기",onclick:()=>{ p.color=null; applyPair(); save(); }},"테마색");
+    card.append(el("div",{class:"pc-ctrl"},[sw,rs]));
+  });
+  applyPair();
+};
+function setupPair(){
+  document.querySelectorAll("[data-grad]").forEach(b=>b.onclick=()=>{ const s=tstore.get(); s.pairGrad=(b.dataset.grad==="on"); tstore.set(s); applyPair(); });
+  document.getElementById("resetBtn").onclick=resetContent;
+  document.getElementById("resetAll").onclick=resetContent;
+}
+
 renderAll();
 initTheme();
 setupHex();
 setupOOC();
+setupPair();
+window.__pairReady=true;
+applyPair();
+dbGet().then(saved=>{
+  if(saved){ state=normalizeState(saved); renderAll(); applyPair(); toast("이전에 쓰던 내용을 불러왔어요."); }
+}).finally(()=>{ __loaded=true; });
+
 </script>
 </body>
 </html>
